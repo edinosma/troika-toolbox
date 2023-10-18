@@ -1,4 +1,6 @@
-
+*.mat
+*.fig
+*.txt
 functions/traj_filt.m
 functions/traj_filt_edin.m
 functions/traj_sorter.old
