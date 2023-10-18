@@ -1,0 +1,9 @@
+
+functions/traj_filt.m
+functions/traj_filt_edin.m
+functions/traj_sorter.old
+generators/trjR_brownian.m
+generators/trjR_confined.m
+msd/msdCalc.m
+msd/msdPlots.m
+trjR_combined.m
