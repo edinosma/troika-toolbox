@@ -1,5 +1,6 @@
 # troika-toolbox: MATLAB scripts for analyzing Troika SPT data
 [![DOI](https://zenodo.org/badge/706878719.svg)](https://zenodo.org/doi/10.5281/zenodo.10019823)
+
 A small set of programs dedicated to analyzing [Troika's](https://github.com/LandesLab/Troika-Single-particle-tracking) `trjR` variables.
 
 ### What's in the box
