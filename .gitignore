@@ -1,6 +1,8 @@
-
-functions/traj_filt.m
-functions/traj_filt_edin.m
+*.mat
+*.fig
+*.txt
+*.asv
+functions/traj_filt_chayan.m
 functions/traj_sorter.old
 generators/trjR_brownian.m
 generators/trjR_confined.m
