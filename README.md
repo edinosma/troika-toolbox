@@ -14,6 +14,7 @@ A small set of programs dedicated to analyzing [Troika's](https://github.com/Lan
 |:--------:|:-----------:|
 |`traj_firstframe`|Removes all tracks present since the first frame.|
 |`traj_sorter`|Separates "fast" and "slow" tracks.|
+|`traj_filt`|Get tracks that last `x` frames or greater. Also interpolate between lost frames of tracking.|
 
 #### `graphs/`
 | Name | Description |
