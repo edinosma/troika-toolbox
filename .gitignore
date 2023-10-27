@@ -6,6 +6,4 @@ functions/traj_filt_chayan.m
 functions/traj_sorter.old
 generators/trjR_brownian.m
 generators/trjR_confined.m
-msd/msdCalc.m
-msd/msdPlots.m
 trjR_combined.m

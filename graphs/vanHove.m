@@ -3,7 +3,7 @@
 TIME_LAG = [16, 33, 66, 134, 267]; % In frames.
 % TIME_LAG = 1;
 PX_SIZE = 0.160;
-GRAPH_SPACING = 3;
+GRAPH_SPACING = 3; % 0 to disable.
 
 %% Calculate and rescale
 vhFig = figure;
