@@ -12,7 +12,7 @@ GRAPH_SPACING = 0; % 0 to disable.
 
 % Booleans
 FIT_GRAPH = false; % Fit graphs to 2 gaussians; find the diffusion.
-CALC_ALPHA2 = true; % Calculate the non-Gaussianity param, or alpha 2.
+CALC_ALPHA2 = false; % Calculate the non-Gaussianity param, or alpha 2.
 PLOT_VH = true; % Plot the van Hove correlation function
 
 %% Make van Hoves for ALL time lags
@@ -72,16 +72,22 @@ for i = 1:length(TIME_LAG)
 end
 
 %% Pretty Up Graph
-set(gca, 'YScale', 'log');
-% legend("Location","northwest");
-xlabel("\Deltax (\mum)"); ylabel("G(\Deltax, \Deltat)");
-pbaspect([1 1 1]);
-% title('Remember to change ylabel \Deltat to value!');
-box on
+if PLOT_VH
+    set(gca, 'YScale', 'log');
+    % legend("Location","northwest");
+    xlabel("\Deltax (\mum)"); ylabel("G(\Deltax, \Deltat)");
+    pbaspect([1 1 1]);
+    box on
+end
 
-%% Clean up data
+%% Plot alpha 2s
 if CALC_ALPHA2
     a2 = cell2mat(a2);
+    % a2Fig = figure;
+    hold on
+    plot(a2(:,1), a2(:,2));
+    xlabel("\tau (s)"); ylabel("|\alpha_2| (-)");
+    pbaspect([1 1 1]); box on
 end
 
 %% Functions
@@ -105,7 +111,7 @@ function [bins, edges, dR] = calcVH(trjR, lagtime)
 
     dR = outdata;
 
-    % Remove NaNs
+    % Remove NaNs. Necessary, as NaNs actually affect the height of hists.
     outdata = outdata(:);
     outdata = outdata(~isnan(outdata));
 
@@ -115,34 +121,30 @@ end
 
 function alpha2 = calcAlpha2(displacement)
     %CALCALPHA2 Calculate the non-Gaussianity parameter from displacement.
-    % a2 = (mean(kurtosis) / 3*mean(variance)) - 1
+    % a2 = 3 * (mean(r(tau)^4) / 5*mean(r(tau)^2)^2) - 1
     % Output is [mean stdev]
 
-    kurt  = nan([1 length(displacement)]); % Allocate mem
-    varia = kurt;
+    a2  = nan([1 length(displacement)]); % Allocate mem
 
     for i = 1:length(displacement)
         dR = displacement(:, i);
         dR = dR(~isnan(dR)); % Get rid of NaNs
         
-        a2(i) = (mean(dR .^ 4) / (3 .* mean(dR .^ 2)).^2) - 1;
+        a2(i) = ((3 * mean(dR .^ 4)) / (5 * mean(dR .^ 2) .^ 2)) - 1;
     end
 
-    % Clean up values (in case there are NaNs)
-    a2 = a2(~isnan(a2));
+    % Clean up values (in case there are NaNs, a2 should be |a2|)
+    a2 = abs(a2(~isnan(a2)));
+    a2 = a2(a2 < 50);
     alpha2 = [mean(a2), std(a2)];
 end
 
 function fitObj = fitVH(x, y, center, slope)
+    %FITVH Fit two Gaussians or an exponential to a van Hove graph.
+
     % Depending on the slope of the van Hove at its center,
     % we fit either 2 Gaussians or 1 Gauss and 1 exponential.
     % Navigate to this function to read more.
-
-    % For every Gaussian:
-    %  D = sigma^2 / 4(timelag)
-
-    % For every Exponential:
-    %  lambda(tau) = sqrt(tau). Remember that we fit with 1/lambda!
 
     % Get slope of data.
     dx = mean(diff(x));
