@@ -125,18 +125,12 @@ function alpha2 = calcAlpha2(displacement)
         dR = displacement(:, i);
         dR = dR(~isnan(dR)); % Get rid of NaNs
         
-        kurt(i) = moment(dR, 4);
-        varia(i) = moment(dR, 2);
+        a2(i) = (mean(dR .^ 4) / (3 .* mean(dR .^ 2)).^2) - 1;
     end
 
     % Clean up values (in case there are NaNs)
-    kurt = kurt(~isnan(kurt));
-    varia = varia(~isnan(varia));
-
-    % Calculate alpha 2
-    a2 = (mean(kurt) / (3 * mean(varia) .^ 2)) - 1;
-
-    alpha2 = a2;
+    a2 = a2(~isnan(a2));
+    alpha2 = [mean(a2), std(a2)];
 end
 
 function fitObj = fitVH(x, y, center, slope)
