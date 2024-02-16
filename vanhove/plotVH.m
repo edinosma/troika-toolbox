@@ -2,8 +2,8 @@
 %% Declare Vars
 % Frame(s) to view
 % TIME_LAG = [1, 16]; % In frames.
-TIME_LAG = [1, 2, 4, 8, 16];
-% TIME_LAG = 1;
+% TIME_LAG = [1, 2, 4, 8, 16];
+TIME_LAG = 1:250;
 
 % Settings
 TIME_SCALE = 0.03;
@@ -11,8 +11,8 @@ PX_SIZE = 0.160;
 GRAPH_SPACING = 0; % 0 to disable.
 
 % Booleans
-FIT_GRAPH = false; % Fit graphs to 2 gaussians; find the diffusion.
-CALC_ALPHA2 = false; % Calculate the non-Gaussianity param, or alpha 2.
+FIT_GRAPH = true; % Fit graphs to 2 gaussians; find the diffusion.
+CALC_ALPHA2 = true; % Calculate the non-Gaussianity param, or alpha 2.
 PLOT_VH = true; % Plot the van Hove correlation function
 
 %% Make van Hoves for ALL time lags
@@ -26,7 +26,7 @@ assert(max(TIME_LAG) <= size(trjR, 1), "Timelags must be smaller than the number
 % processing.
 
 y = cell(length(TIME_LAG), 1);
-a2 = y; displace = y;
+a2 = y; displace = y; fitObj = y;
 [y{:}] = deal(nan(1, 100));
 x = y;
 
@@ -58,9 +58,10 @@ for i = 1:length(TIME_LAG)
     end
 
     %% Fit graph
-    %   Fit 2 gauss/1 gauss 1 exponential to every van Hove graph
+    %   Fit 2 gauss to every van Hove graph
     if FIT_GRAPH
-        fitObj(i) = fitVH(xGraph, yGraph, 0.2, 0.05);
+        if i == 1; disp("Fitting all van Hove graphs."); end
+        fitObj{i} = fitVH(xGraph, yGraph, 0.5);
     end
 
     %% Plot graph
@@ -83,11 +84,23 @@ end
 %% Plot alpha 2s
 if CALC_ALPHA2
     a2 = cell2mat(a2);
-    % a2Fig = figure;
+    a2Fig = figure;
     hold on
-    plot(a2(:,1), a2(:,2));
+    plot(a2(:,1) .* TIME_SCALE, a2(:,2));
     xlabel("\tau (s)"); ylabel("|\alpha_2| (-)");
     pbaspect([1 1 1]); box on
+end
+
+%% Calculate diffusions from Gaussians
+if FIT_GRAPH
+    calcDiff = @(x, t) (x^2)/(4 * t);
+    for i = 1:length(TIME_LAG)
+        coHead = coeffvalues(fitObj{i}{1,1});
+        coTail = coeffvalues(fitObj{i}{1,2});
+
+        diffusions(:,i) = [calcDiff(coHead(1,3), TIME_LAG(i)) ...
+            calcDiff(coTail(1,3), TIME_LAG(i))];
+    end
 end
 
 %% Functions
@@ -116,7 +129,7 @@ function [bins, edges, dR] = calcVH(trjR, lagtime)
     outdata = outdata(~isnan(outdata));
 
     % Put it in a histogram
-    [bins, edges] = histcounts(outdata, 100, "Normalization", "probability");
+    [bins, edges] = histcounts(outdata, 200, "Normalization", "probability");
 end
 
 function alpha2 = calcAlpha2(displacement)
@@ -139,27 +152,16 @@ function alpha2 = calcAlpha2(displacement)
     alpha2 = [mean(a2), std(a2)];
 end
 
-function fitObj = fitVH(x, y, center, slope)
-    %FITVH Fit two Gaussians or an exponential to a van Hove graph.
+function fitObj = fitVH(x, y, center)
+    %FITVH Fit two Gaussians to a van Hove graph.
+    % Exports a fit object.
 
-    % Depending on the slope of the van Hove at its center,
-    % we fit either 2 Gaussians or 1 Gauss and 1 exponential.
-    % Navigate to this function to read more.
+    poi = (x <= center) & (x >= -center); % Get indicies of head
 
-    % Get slope of data.
-    dx = mean(diff(x));
-    dy = gradient(y,dx);
+    % Fit two gaussians: head, and tail.
+    [fitObj{1,1}, fitObj{2,1}]  = fit(x(poi)',  y(poi)',  "gauss1"); % Head
+    % figure; plot(fitObj{1,1}, x, y); set(gca, 'YScale', 'log'); ylim([1e-5, 1])
 
-    % If the "center" ([-0.2, 0.2]) is a rounded shape (|slope| > 0.05),
-    poi = find((x >= center) & (x <= center));
-
-    if max(abs(dy(poi))) > abs(slope)
-        % Fit two gaussians.
-
-    else
-        % Else, it can be fit with an exponential center and a Gaussian tail.
-
-    end
-    
-    % Export fit obj. We can extract the data we want from the main program.
+    [fitObj{1,2}, fitObj{2,2}] = fit(x(~poi)', y(~poi)', "gauss1"); % Tail
+    % figure; plot(fitObj{2,1}, x, y); set(gca, 'YScale', 'log');
 end
