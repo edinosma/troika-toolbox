@@ -1,9 +1,8 @@
 % Generate and fit van Hove graphs from trajectories. Written by Edin O. on 9.8.23
 %% Declare Vars
 % Frame(s) to view
-% TIME_LAG = [1, 16]; % In frames.
+TIME_LAG = [1,16]; % In frames.
 % TIME_LAG = [1, 2, 4, 8, 16];
-TIME_LAG = 1:250;
 
 % Settings
 TIME_SCALE = 0.03;
@@ -12,8 +11,8 @@ GRAPH_SPACING = 0; % 0 to disable.
 
 % Booleans
 FIT_GRAPH = true; % Fit graphs to 2 gaussians; find the diffusion.
-CALC_ALPHA2 = true; % Calculate the non-Gaussianity param, or alpha 2.
-PLOT_VH = true; % Plot the van Hove correlation function
+CALC_ALPHA2 = false; % Calculate the non-Gaussianity param, or alpha 2.
+PLOT_VH = false; % Plot the van Hove correlation function
 
 %% Make van Hoves for ALL time lags
 % vhFig = figure;
@@ -61,7 +60,7 @@ for i = 1:length(TIME_LAG)
     %   Fit 2 gauss to every van Hove graph
     if FIT_GRAPH
         if i == 1; disp("Fitting all van Hove graphs."); end
-        fitObj{i} = fitVH(xGraph, yGraph, 0.5);
+        fitObj{i} = fitVH(xGraph, yGraph, 0.2);
     end
 
     %% Plot graph
@@ -158,10 +157,10 @@ function fitObj = fitVH(x, y, center)
 
     poi = (x <= center) & (x >= -center); % Get indicies of head
 
-    % Fit two gaussians: head, and tail.
+    % Fit two gaussians.
     [fitObj{1,1}, fitObj{2,1}]  = fit(x(poi)',  y(poi)',  "gauss1"); % Head
-    % figure; plot(fitObj{1,1}, x, y); set(gca, 'YScale', 'log'); ylim([1e-5, 1])
+    figure; plot(fitObj{1,1}, x, y); set(gca, 'YScale', 'log'); ylim([1e-7, 1])
 
     [fitObj{1,2}, fitObj{2,2}] = fit(x(~poi)', y(~poi)', "gauss1"); % Tail
-    % figure; plot(fitObj{2,1}, x, y); set(gca, 'YScale', 'log');
+    figure; plot(fitObj{1,2}, x, y); set(gca, 'YScale', 'log'); ylim([1e-7, 1])
 end
