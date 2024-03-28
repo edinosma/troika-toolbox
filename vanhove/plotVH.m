@@ -1,8 +1,8 @@
 % Generate and fit van Hove graphs from trajectories. Written by Edin O. on 9.8.23
 %% Declare Vars
 % Frame(s) to view
-TIME_LAG = 1; % In frames.
-% TIME_LAG = [1, 2, 4, 8, 16];
+% TIME_LAG = 16; % In frames.
+TIME_LAG = [1, 2, 4, 8, 16];
 
 % Settings
 TIME_SCALE = 0.03;
@@ -10,7 +10,7 @@ PX_SIZE = 0.160;
 GRAPH_SPACING = 0; % 0 to disable.
 
 % Booleans
-FIT_GRAPH = false; % Fit graphs to 2 gaussians; find the diffusion.
+FIT_GRAPH = true; % Fit graphs to 2 gaussians; find the diffusion.
 CALC_ALPHA2 = false; % Calculate the non-Gaussianity param, or alpha 2.
 PLOT_VH = false; % Plot the van Hove correlation function
 
@@ -42,10 +42,10 @@ y = cell2mat(y); % [TIME_LAG 100]
 x = cell2mat(x);
 
 for i = 1:length(TIME_LAG)
-    yFit = log10(y(i, :));
+    yFit = log10(y(i, :)); % For fitting
+    xFit = x(i, :);
 
     yGraph = y(i, :) .* 10^(GRAPH_SPACING * (i - 1)); % For offsetting values on the graph
-    xGraph = x(i, :);
 
     frameToSec = TIME_LAG(i) * TIME_SCALE;
 
@@ -60,13 +60,15 @@ for i = 1:length(TIME_LAG)
     %   Fit 2 gauss to every van Hove graph
     if FIT_GRAPH
         if i == 1; disp("Fitting all van Hove graphs."); end
-        fitObj(i,:) = fitVH(xGraph, y(i, :), 0:0.01:0.1, 0.2:0.01:0.5, 0:0.01:1);
+
+        % We need to get rid of the inf values or else fitting won't work
+        fitObj(i,:) = fitVH(xFit(~isinf(yFit)), yFit(~isinf(yFit)));
     end
 
     %% Plot graph
     if PLOT_VH
     hold on
-    plot(xGraph, yGraph, "o", ...
+    plot(xFit, yGraph, "o", ...
         "DisplayName", "\Deltat = " + num2str(frameToSec), Marker=".", MarkerSize=6);
     end
 end
@@ -92,9 +94,20 @@ end
 
 %% Calculate diffusions from Gaussians
 if FIT_GRAPH
-    calcDiff = @(x, t) (x^2)/(4 * t);
+    clearvars values
+    fitFig = figure; hold on
+    calcDiff = @(x, t) (x.^2)./(4 * t);
+
     for i = 1:length(TIME_LAG)
+        % Diffusion = (sigma^2) / 4 * t
+        values(i,:) = coeffvalues(fitObj{i,1}); % a1 c1 a2 c2 d
+        diffusion(i,:) = calcDiff(values([2,4]), i * TIME_SCALE);
+        plot(fitObj{i,1}, x(i,:), log10(y(i,:)))
     end
+
+    figure; hold on
+    plot(TIME_LAG * TIME_SCALE, values(:,2))
+    plot(TIME_LAG * TIME_SCALE, values(:,4))
 end
 
 %% Functions
@@ -147,52 +160,20 @@ function alpha2 = calcAlpha2(displacement)
     alpha2 = [mean(a2), std(a2)];
 end
 
-function outFit = fitVH(x, y, varyS1, varyS2, varyK)
+function result = fitVH(x, y)
     %FITVH Fit two Gaussians to a van Hove graph.
-    % This is done per DOI: 10.1039/c0sm00925c, where we constantly try
-    % fitting two Gaussians of varying width (sigma) and height (k), and
-    % adjust parameters over and over until we get a good fit.
-    % This section could take a while depending on how many graphs we're
-    % fitting.
-    % Exports sigma1, sigma2, k, and R2 of the best-fitting Gaussians graph.
+    % This is done per DOI: 10.1038/nmat3308
 
     % Define anonymous funcs
-    fitGauss = @(x, s1, s2, k) (k)*exp(-((x)./s1).^2) + (1-k)*exp(-((x)./s2).^2);
+    fitGauss = @(a1, c1, a2, c2, d, x) a1 * exp((-x.^2)/(2*c1^2)) +...
+                                       a2 * exp((-x.^2)/(2*c2^2)) + d;
 
-    xbar = mean(y);
-    rSquared = @(x, xfit) 1 - (sum((x - xfit).^2) / sum((x - xbar).^2));
-    % x = raw data (y), xbar = mean, xfit = fit data
+    ft = fittype(fitGauss);
 
-    % Get to work!
-    try % For some reason, MATLAB doesn't have a way to escape a nested for loop.
-        % Let's do a try-catch statement instead, stopping with our own error.
+    fitOpts = fitoptions(ft);
+    fitOpts.Lower = [-Inf, 0, -Inf, 0, -Inf];
+    fitOpts.StartPoint = [0.6541, 0.6892, 0.7482, 0.4505, 0.8909];
 
-        for k = varyK
-            for s1 = varyS1
-                for s2 = varyS2
-                    % Calculate r2 for this graph
-                    % If greater than 0.90, then we'll plot that
-                    doubleGauss = fitGauss(x, s1, s2, k);
-                    idx = [find(varyS2 == s2), find(varyS1 == s1), find(varyK == k)];
-
-                    r2val(idx(1), idx(2), idx(3)) = rSquared(y, doubleGauss);
-                    
-                    assert(~(r2val(idx(1), idx(2), idx(3)) > 0.85), 'break')
-                end
-            end
-        end
-
-        outFit = [NaN, NaN, NaN, NaN];
-        disp("Could not fit graph! Max r2val: " + max(r2val, [], "all"))
-    catch err
-        if strcmp(err.message, 'break')
-            disp("Greater than 90 R2: " + s1 + " " + s2 + " " + k + " " + r2val(idx(1), idx(2), idx(3)))
-            figure; hold on
-            plot(x, y, 'o');
-            plot(x, doubleGauss, '-');
-
-            outFit = [s1, s2, k, max(r2val, [], "all")];
-        else, rethrow(err)
-        end
-    end
+    [outFit, gof] = fit(x', y', ft, fitOpts);
+    result = {outFit, gof};
 end
