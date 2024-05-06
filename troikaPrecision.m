@@ -2,6 +2,7 @@
 %%  Settings
 PX_SIZE = 0.160;
 UNITS = "um";
+AXIS = {"Y", "X"};
 
 %% Calculate
 trimmed = trjR(:,1:2,:) .* PX_SIZE;
@@ -10,12 +11,15 @@ trimmed(idxZeros) = NaN;
 
 sigma = std(trimmed, 0, "omitmissing");
 
-sigReshaped = reshape(sigma, [], 2);
-med = median(sigReshaped); mu = mean(sigReshaped);
+sigma = reshape(sigma, [], 2);
+med = median(sigma); mu = mean(sigma);
 
 %% Plotting
-hist = histogram(sigReshaped(:,1), 'Normalization', 'probability'); % x axis
-ylabel("Probability"); xlabel("STDs (" + UNITS + ")");
-strMean = "Mean: " + string(mu) + UNITS; strMed = "Median: " + string(med) + UNITS;
-dim = [.2 .5 .3 .3];
-annotation('textbox',dim,'String',{strMean(1,1), strMed(1,1)},'FitBoxToText','on');
+for iFigs = 1:size(sigma, 2)
+    figure;
+    hist = histogram(sigma(:, iFigs), 'Normalization', 'probability');
+    ylabel("Probability of " + string(AXIS{iFigs})); xlabel("Standard Deviations (" + UNITS + ")");
+    strMean = "Mean: " + string(mu(iFigs)) + UNITS; strMed = "Median: " + string(med(iFigs)) + UNITS;
+    dim = [.2 .5 .3 .3];
+    annotation('textbox',dim,'String',{strMean(1,1), strMed(1,1)},'FitBoxToText','on');
+end

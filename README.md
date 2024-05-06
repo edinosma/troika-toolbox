@@ -9,6 +9,7 @@ A small set of programs dedicated to analyzing [Troika's](https://github.com/Lan
 |:--------:|:-----------:|
 |`troikaEnum`|Find when a track starts, ends, and how long it lasted for.|
 |`troikaPrecision`|Calculate Troika's precision in the context of your camera.|
+|`trjR_separator`|Separates combined trjR files into parts with the same number of trajectories.|
 
 #### `converters/`
 | Name | Description |
@@ -28,4 +29,8 @@ A small set of programs dedicated to analyzing [Troika's](https://github.com/Lan
 |:--------:|:-----------:|
 |`displacements`|Plot the displacement of tracks vs. time-lag.|
 |`trackEvolutions`|Plot how tracks change over time.|
-|`vanHove`|Generate a van Hove correlation graph.|
+|`vanHove`|Plot and fit a van Hove correlation graph.|
+|`fitRec`|Plot the reconstructed van Hove correlation graph from Track Analysis.|
+
+#### `msd/`
+N/A
